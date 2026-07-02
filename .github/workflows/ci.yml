@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  repo-hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required top-level files
+        run: |
+          test -f README.md
+          test -f LICENSE
+          test -f Makefile
+
+      - name: Check required documentation files
+        run: |
+          test -f docs/architecture.md
+          test -f docs/register_map.md
+          test -f docs/driver_api.md
+          test -f docs/qemu_device.md
+          test -f docs/testing.md
+          test -f docs/bringup.md
+          test -f docs/demo.md
+
+      - name: Check QEMU source files
+        run: |
+          test -f qemu/hw/misc/qemu_mbox.c
+          test -f qemu/include/hw/misc/qemu_mbox.h
+
+      - name: Check SPDX headers in source files
+        run: |
+          grep -q "SPDX-License-Identifier" qemu/hw/misc/qemu_mbox.c
+          grep -q "SPDX-License-Identifier" qemu/include/hw/misc/qemu_mbox.h
+
+      - name: Check for trailing whitespace
+        run: |
+          if git grep -n '[[:blank:]]$' -- '*.c' '*.h' '*.md' '*.yml' '*.yaml'; then
+            echo "Trailing whitespace found"
+            exit 1
+          fi
+
+      - name: Check for tab characters in Markdown and YAML
+        run: |
+          if git grep -n $'\t' -- '*.md' '*.yml' '*.yaml'; then
+            echo "Tab characters found in Markdown/YAML"
+            exit 1
+          fi
+
+      - name: Print repository summary
+        run: |
+          echo "CI v1 passed: repository structure and source hygiene look good."
