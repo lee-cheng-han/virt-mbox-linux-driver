@@ -9,8 +9,9 @@ The demo should prove:
 
 - QEMU exposes the custom MMIO device.
 - Linux probes the platform driver.
-- `/dev/qemu_mbox0` is created.
+- `/dev/vmbox0` is created.
 - userspace can write data and read processed data.
+- sysfs exposes stable status and FIFO depth attributes.
 - blocking and non-blocking I/O behave correctly.
 - `poll()` wakes on device readiness.
 - ioctl reset, status, and stats work.
@@ -21,11 +22,11 @@ The demo should prove:
 Target driver log shape:
 
 ```text
-qemu_mbox 10000000.mbox: device id 0x514d424f
-qemu_mbox 10000000.mbox: hardware version 1.0
-qemu_mbox 10000000.mbox: fifo depth 16
-qemu_mbox 10000000.mbox: irq registered
-qemu_mbox 10000000.mbox: registered /dev/qemu_mbox0
+vmbox 10000000.mbox: device id 0x514d424f
+vmbox 10000000.mbox: hardware version 1.0
+vmbox 10000000.mbox: fifo depth 16
+vmbox 10000000.mbox: irq registered
+vmbox 10000000.mbox: registered /dev/vmbox0
 ```
 
 Exact bus addresses may change depending on the QEMU machine and device tree.
@@ -61,6 +62,17 @@ For a polished project page, keep:
 - debugfs sample output
 - CI run link or screenshot
 - short architecture diagram
+
+## Future Work
+
+- runtime PM
+- suspend/resume support
+- IOThread-aware QEMU locking if the execution context changes
+- DMA support
+- configurable or larger FIFO depth
+- multi-instance support
+- full syzkaller integration
+- stronger timeout/error recovery if IRQs are lost
 
 ## Stretch Demo
 

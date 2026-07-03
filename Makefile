@@ -8,7 +8,10 @@ check:
 	test -f README.md
 	test -f LICENSE
 	test -f Makefile
+	test -f MAINTAINERS
+	test -f .clang-format
 	test -f docs/architecture.md
+	test -f docs/REGISTERS.md
 	test -f docs/register_map.md
 	test -f docs/driver_api.md
 	test -f docs/qemu_device.md
@@ -23,14 +26,22 @@ check:
 	test -f qemu/patches/aarch64-softmmu.default.mak.fragment
 	test -f qemu/patches/qtest-meson.build.fragment
 	test -f qemu/tests/qtest/qemu_mbox-test.c
+	test -f kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
+	test -f kernel/drivers/misc/Kconfig.fragment
+	test -f kernel/drivers/misc/Makefile.fragment
+	test -f scripts/udev/99-vmbox.rules
+	test -f tests/fuzz/README.md
 	grep -q "SPDX-License-Identifier" qemu/hw/misc/qemu_mbox.c
 	grep -q "SPDX-License-Identifier" qemu/include/hw/misc/qemu_mbox.h
 	grep -q "SPDX-License-Identifier" qemu/tests/qtest/qemu_mbox-test.c
-	@if git grep -n '[[:blank:]]$$' -- '*.c' '*.h' '*.md' '*.yml' '*.yaml' '*.fragment'; then \
+	grep -q "SPDX-License-Identifier" docs/REGISTERS.md
+	grep -q "SPDX-License-Identifier" kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
+	grep -q "SPDX-License-Identifier" scripts/udev/99-vmbox.rules
+	@if git grep -n '[[:blank:]]$$' -- '*.c' '*.h' '*.md' '*.yml' '*.yaml' '*.fragment' '*.rules'; then \
 		echo "Trailing whitespace found"; \
 		exit 1; \
 	fi
-	@if git grep -n "$$(printf '\t')" -- '*.md' '*.yml' '*.yaml' '*.fragment'; then \
+	@if git grep -n "$$(printf '\t')" -- '*.md' '*.yml' '*.yaml' '*.fragment' '*.rules'; then \
 		echo "Tab characters found in Markdown/YAML"; \
 		exit 1; \
 	fi

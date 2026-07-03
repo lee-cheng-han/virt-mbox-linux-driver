@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * QEMU Mailbox MMIO Device
+ * Virtual Mailbox MMIO Device
  *
  * Minimal memory-mapped mailbox/FIFO-style device model used for an
  * embedded Linux character driver project.
@@ -12,7 +12,7 @@
 #include "hw/sysbus.h"
 #include "qom/object.h"
 
-#define TYPE_QEMU_MBOX "qemu-mbox"
+#define TYPE_QEMU_MBOX "virt-mbox"
 OBJECT_DECLARE_SIMPLE_TYPE(QemuMboxState, QEMU_MBOX)
 
 #define QEMU_MBOX_MMIO_SIZE       0x1000

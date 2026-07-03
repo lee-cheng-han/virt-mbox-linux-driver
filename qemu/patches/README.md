@@ -1,7 +1,7 @@
 # QEMU Integration Notes
 
 This directory contains the project-owned integration notes and build fragments
-for adding `qemu-mbox` to a real QEMU source tree.
+for adding `virt-mbox` to a real QEMU source tree.
 
 The repository is not itself a full QEMU checkout. Treat the files under
 `qemu/hw/` and `qemu/include/` as the source payload for a future QEMU patch.
@@ -124,7 +124,7 @@ Later milestones should instantiate the device from one of these places:
 
 The instantiation code must:
 
-- create the `qemu-mbox` device
+- create the `virt-mbox` device
 - realize it as a sysbus device
 - map its MMIO region at the documented base address
 - connect its IRQ line once IRQ support exists
@@ -147,5 +147,5 @@ qemu/patches/qtest-meson.build.fragment
 ```
 
 The test skeleton expects a future QEMU machine or QTest harness named
-`qemu-mbox-test-machine` that maps the device at `0x10000000`. Those names are
+`virt-mbox-test-machine` that maps the device at `0x10000000`. Those names are
 placeholders until runtime instantiation is added.

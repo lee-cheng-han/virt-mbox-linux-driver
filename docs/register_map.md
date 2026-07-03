@@ -1,5 +1,8 @@
 # qemu_mbox Register Map
 
+This file preserves the initial register-map notes. The canonical register
+reference for new work is [REGISTERS.md](REGISTERS.md).
+
 ## MMIO region
 
 - Base address: assigned by QEMU machine/device tree

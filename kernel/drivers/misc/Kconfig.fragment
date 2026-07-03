@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config VMBOX
+    tristate "QEMU virtual mailbox character device"
+    depends on OF
+    help
+      Build the vmbox platform character driver for the QEMU-emulated
+      virt,mbox MMIO mailbox device. The driver exposes /dev/vmbox0 and is
+      intended for testing MMIO, IRQ, poll, ioctl, and debugfs driver paths.

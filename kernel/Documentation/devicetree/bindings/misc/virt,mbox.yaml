@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/misc/virt,mbox.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Virtual MMIO Mailbox Device
+
+maintainers:
+  - Lee Cheng Han <lee-cheng-han@users.noreply.github.com>
+
+description:
+  The virt,mbox device is a QEMU-emulated MMIO mailbox used to exercise a Linux
+  platform character driver. It exposes a fixed register interface, one MMIO
+  resource, and one interrupt line.
+
+properties:
+  compatible:
+    const: virt,mbox
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - interrupts
+
+additionalProperties: false
+
+examples:
+  - |
+    mbox@10000000 {
+        compatible = "virt,mbox";
+        reg = <0x10000000 0x1000>;
+        interrupts = <5>;
+    };
+...

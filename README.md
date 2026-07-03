@@ -15,7 +15,7 @@ userspace tests and demo tools
         |
         | open(), read(), write(), poll(), ioctl()
         v
-/dev/qemu_mbox0
+/dev/vmbox0
         |
         | Linux platform character driver
         v
@@ -23,7 +23,7 @@ MMIO registers and IRQ
         |
         | readl(), writel()
         v
-QEMU qemu-mbox SysBusDevice
+QEMU virt-mbox SysBusDevice
 ```
 
 ## Current Status
@@ -31,9 +31,14 @@ QEMU qemu-mbox SysBusDevice
 Implemented:
 
 - Repository skeleton and architecture documentation
-- Register map contract for `qemu_mbox`, including reset, FIFO, IRQ, and
+- Register map contract for `vmbox`, including reset, FIFO, IRQ, and
   invalid-access semantics
 - Planned Linux driver API and ioctl UAPI structures
+- Planned driver/module naming: `vmbox`
+- Planned device node: `/dev/vmbox0`
+- Planned devicetree compatible string: `virt,mbox`
+- Canonical register reference in `docs/REGISTERS.md`
+- Devicetree binding schema draft for `virt,mbox`
 - Testing, bring-up, and demo plans
 - Initial QEMU MMIO device source files
 - QEMU integration notes and Meson/Kconfig/device-enable fragments
@@ -42,6 +47,13 @@ Implemented:
   TX_COUNT, RX_COUNT, FIFO_DEPTH, and RESET register definitions
 - Temporary single-byte TX/RX behavior for early smoke testing
 - Initial repository hygiene CI
+- Concurrency, lifetime-safety, compat ioctl, observability, and robustness
+  testing roadmap updates
+- QEMU VMState/migration requirements documented
+- Planned sysfs attributes alongside debugfs
+- UAPI struct size guard requirements
+- Single-open `/dev/vmbox0` policy
+- `.clang-format` and `MAINTAINERS` project hygiene files
 
 Not implemented yet:
 
@@ -50,7 +62,7 @@ Not implemented yet:
 - Real TX/RX FIFO behavior
 - Processing timer and interrupt line
 - Linux platform character driver
-- `/dev/qemu_mbox0`
+- `/dev/vmbox0`
 - userspace regression tests
 - full build and boot CI
 
@@ -62,8 +74,9 @@ Not implemented yet:
    behavior.
 4. Replace temporary TX/RX behavior with real 16-byte TX and RX FIFOs.
 5. Add processing latency and IRQ generation.
-6. Implement the Linux platform character driver probe and remove paths.
-7. Add `/dev/qemu_mbox0` read, write, non-blocking mode, and poll support.
+6. Implement the Linux `vmbox` platform character driver probe and remove
+   paths.
+7. Add `/dev/vmbox0` read, write, non-blocking mode, and poll support.
 8. Add ioctl commands for reset, status, stats, and mode configuration.
 9. Add debugfs observability and stress tests.
 10. Expand CI to build QEMU, build the kernel module, run QTest, and run
@@ -78,7 +91,8 @@ QEMU checkout and building `aarch64-softmmu`.
 ## Documentation
 
 - [Architecture](docs/architecture.md)
-- [Register map](docs/register_map.md)
+- [Register reference](docs/REGISTERS.md)
+- [Legacy register map notes](docs/register_map.md)
 - [Driver API](docs/driver_api.md)
 - [QEMU device model](docs/qemu_device.md)
 - [Testing plan](docs/testing.md)
@@ -90,3 +104,15 @@ QEMU checkout and building `aarch64-softmmu`.
 This repository uses the MIT license for project documentation and scripts.
 QEMU-facing source files carry GPL-compatible SPDX identifiers because they are
 intended to become part of a QEMU patch.
+
+## Final Project Summary
+
+Implemented a QEMU-emulated MMIO mailbox peripheral and Linux platform
+character driver exposing `/dev/vmbox0`, with FIFO-backed data paths, explicit
+concurrency and locking design, safe remove/unbind lifetime handling, module
+unload safety, portable MMIO access using `readl()`/`writel()`,
+interrupt-driven blocking I/O, `poll()`/`ioctl()`/`compat_ioctl` support,
+debugfs instrumentation, production-style error counters, devicetree binding
+schema, QTest hardware-model coverage, userspace regression tests, ioctl
+fuzzing, static-analysis CI, sanitizer-based runtime testing, and end-to-end
+QEMU boot validation.

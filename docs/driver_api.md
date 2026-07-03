@@ -3,7 +3,7 @@
 The final Linux driver will expose one character device:
 
 ```text
-/dev/qemu_mbox0
+/dev/vmbox0
 ```
 
 The device represents a byte-oriented mailbox backed by the QEMU MMIO register
@@ -22,6 +22,10 @@ Planned operations:
 | `poll()` | Report RX readiness and TX space. |
 | `unlocked_ioctl()` | Handle reset, status, stats, and mode commands. |
 | `llseek()` | Use `no_llseek`. |
+
+The initial implementation should allow only one open file at a time. A second
+open should fail with `-EBUSY`. This is the documented policy for the first
+version because the device exposes one shared FIFO pair.
 
 ## Blocking Rules
 
@@ -56,23 +60,27 @@ miss a wakeup.
 ## Ioctl Plan
 
 The UAPI header will live under `kernel/include/uapi/linux/` once the kernel
-driver starts.
+driver starts. The planned path is:
+
+```text
+kernel/include/uapi/linux/vmbox.h
+```
 
 Planned commands:
 
 | Command | Direction | Purpose |
 |---|---:|---|
-| `QEMU_MBOX_IOC_RESET` | none | Reset hardware and driver stats. |
-| `QEMU_MBOX_IOC_GET_STATUS` | read | Return current hardware status. |
-| `QEMU_MBOX_IOC_GET_STATS` | read | Return driver-visible counters. |
-| `QEMU_MBOX_IOC_SET_MODE` | write | Configure supported driver mode bits. |
+| `VMBOX_IOC_RESET` | none | Reset hardware and driver stats. |
+| `VMBOX_IOC_GET_STATUS` | read | Return current hardware status. |
+| `VMBOX_IOC_GET_STATS` | read | Return driver-visible counters. |
+| `VMBOX_IOC_SET_MODE` | write | Configure supported driver mode bits. |
 
 Planned UAPI shapes:
 
 ```c
-#define QEMU_MBOX_IOC_MAGIC 'q'
+#define VMBOX_IOC_MAGIC 'v'
 
-struct qemu_mbox_status {
+struct vmbox_status {
     __u32 control;
     __u32 status;
     __u32 irq_status;
@@ -83,28 +91,64 @@ struct qemu_mbox_status {
     __u32 reserved;
 };
 
-struct qemu_mbox_stats {
+struct vmbox_stats {
     __u64 bytes_read;
     __u64 bytes_written;
-    __u64 read_wakeups;
-    __u64 write_wakeups;
     __u64 irqs;
     __u64 errors;
+    __u64 errors_irq_spurious;
+    __u64 errors_fifo_overrun;
+    __u64 errors_fifo_underrun;
+    __u64 tx_full_events;
+    __u64 rx_empty_events;
 };
 
-struct qemu_mbox_mode {
+struct vmbox_mode {
     __u32 flags;
     __u32 reserved;
 };
 ```
 
+The driver or UAPI implementation should include compile-time ABI size guards,
+for example with `static_assert()` or `BUILD_BUG_ON()`, so accidental struct
+growth cannot silently break userspace ABI expectations.
+
+Planned guards:
+
+```c
+static_assert(sizeof(struct vmbox_status) == 32);
+static_assert(sizeof(struct vmbox_stats) == 72);
+static_assert(sizeof(struct vmbox_mode) == 8);
+```
+
+These numeric sizes are placeholders until the UAPI header is implemented. Once
+`kernel/include/uapi/linux/vmbox.h` defines the final structs, the constants
+should be generated from that exact layout decision and then treated as ABI
+guards.
+
 Validation requirements:
 
 - reject unknown commands with `-ENOTTY`
+- reject bad ioctl magic with `-ENOTTY`
 - reject invalid mode values with `-EINVAL`
 - reject invalid userspace pointers with `-EFAULT`
+- reject nonzero reserved fields with `-EINVAL`
+- reject invalid struct sizes if size-dependent commands are added
 - keep UAPI structs fixed-width and naturally aligned
 - reserve fields for future extension
+
+The driver should implement `.compat_ioctl` under `CONFIG_COMPAT`. It may reuse
+the native ioctl handler because all planned UAPI structs use fixed-width
+integer fields and contain no embedded userspace pointers.
+
+Planned source comment:
+
+```c
+/*
+ * Safe to reuse the native ioctl handler: all UAPI structs use
+ * fixed-width integer fields and contain no embedded userspace pointers.
+ */
+```
 
 ## Driver State
 
@@ -120,6 +164,8 @@ The driver should use one per-device state object. Planned fields:
 - lock for driver state and stats
 - cached FIFO depth
 - stats counters
+- `device_gone` lifetime flag
+- reference object such as `kref` or `refcount_t`
 
 The driver should avoid global mutable state except for class/device-number
 allocation needed by the character device framework.
@@ -143,7 +189,7 @@ Expected userspace-facing errors:
 Development builds should expose debugfs entries under:
 
 ```text
-/sys/kernel/debug/qemu_mbox0/
+/sys/kernel/debug/vmbox0/
 ```
 
 Planned entries:
@@ -153,3 +199,48 @@ Planned entries:
 - `fifo`
 
 Debugfs is diagnostic only and must not be required for normal operation.
+
+## Sysfs Plan
+
+The driver should also expose a minimal stable sysfs attribute group under the
+platform device. Unlike debugfs, sysfs is a stable user-visible ABI and should
+only expose simple, documented values that are safe to support long term.
+
+Planned read-only attributes:
+
+- `status`
+- `fifo_depth`
+
+Sysfs is for stable inspection. Debugfs is for developer diagnostics such as raw
+register dumps, FIFO internals, and verbose counters.
+
+The `VMBOX_IOC_GET_STATS` ioctl and debugfs `stats` file should both expose:
+
+- `bytes_read`
+- `bytes_written`
+- `irqs`
+- `errors`
+- `errors_irq_spurious`
+- `errors_fifo_overrun`
+- `errors_fifo_underrun`
+- `tx_full_events`
+- `rx_empty_events`
+
+## Access And Permissions
+
+Tests should not rely on running as root. The planned udev rule is:
+
+```text
+scripts/udev/99-vmbox.rules
+```
+
+Expected local setup:
+
+```sh
+sudo install -m 0644 scripts/udev/99-vmbox.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+The rule should grant group access to `/dev/vmbox0`; the documented test user
+must belong to that group.

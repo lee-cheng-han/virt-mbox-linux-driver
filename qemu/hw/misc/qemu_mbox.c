@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * QEMU Mailbox MMIO Device
+ * Virtual Mailbox MMIO Device
  *
  * Minimal MMIO register model for qemu_mbox.
  *
@@ -240,7 +240,7 @@ static void qemu_mbox_class_init(ObjectClass *klass, const void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->desc = "QEMU mailbox MMIO device";
+    dc->desc = "Virtual mailbox MMIO device";
     dc->vmsd = &vmstate_qemu_mbox;
 
     device_class_set_legacy_reset(dc, qemu_mbox_reset);

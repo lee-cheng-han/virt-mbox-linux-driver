@@ -4,15 +4,15 @@
 
 The emulated hardware device is named:
 
-    qemu-mbox
+    virt-mbox
 
 The Linux-facing driver/device name will later be:
 
-    qemu_mbox
+    vmbox
 
 The eventual character device node will be:
 
-    /dev/qemu_mbox0
+    /dev/vmbox0
 
 ## Milestone 2 scope
 
@@ -131,3 +131,7 @@ They are intended to become a patch against a real QEMU source tree:
 
 The first integration target is build-system wiring. Runtime instantiation will
 follow after the minimal build path is documented and testable.
+
+The source filenames still use `qemu_mbox` from the initial milestones. The
+Linux-facing product name is `vmbox`, and the QEMU type string is planned as
+`virt-mbox`.

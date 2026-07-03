@@ -1,15 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * qemu_mbox QTest skeleton.
+ * virt-mbox QTest skeleton.
  *
  * This file is intended to be copied into QEMU as tests/qtest/qemu_mbox-test.c
- * after the qemu-mbox device is wired into a machine or QTest harness.
+ * after the virt-mbox device is wired into a machine or QTest harness.
  */
 
 #include "qemu/osdep.h"
 #include "libqtest-single.h"
 
-#define QEMU_MBOX_TEST_MACHINE "qemu-mbox-test-machine"
+#define QEMU_MBOX_TEST_MACHINE "virt-mbox-test-machine"
 #define QEMU_MBOX_TEST_BASE    0x10000000U
 
 #define QEMU_MBOX_ID_VALUE        0x514d424fU
@@ -112,11 +112,11 @@ int main(int argc, char **argv)
 
     qtest_start("-machine " QEMU_MBOX_TEST_MACHINE);
 
-    qtest_add_func("/qemu_mbox/id_version", test_qemu_mbox_id_version);
-    qtest_add_func("/qemu_mbox/reset_state", test_qemu_mbox_reset_state);
-    qtest_add_func("/qemu_mbox/temporary_tx_rx",
+    qtest_add_func("/vmbox/id_version", test_qemu_mbox_id_version);
+    qtest_add_func("/vmbox/reset_state", test_qemu_mbox_reset_state);
+    qtest_add_func("/vmbox/temporary_tx_rx",
                    test_qemu_mbox_temporary_tx_rx);
-    qtest_add_func("/qemu_mbox/zero_byte_tx_count",
+    qtest_add_func("/vmbox/zero_byte_tx_count",
                    test_qemu_mbox_zero_byte_tx_count);
 
     ret = g_test_run();
