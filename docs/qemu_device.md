@@ -14,9 +14,9 @@ The eventual character device node will be:
 
     /dev/vmbox0
 
-## Milestone 2 scope
+## Step 4 scope
 
-Milestone 2 implements the minimal QEMU MMIO device model.
+Step 4 implements the FIFO-backed QEMU MMIO device model.
 
 Implemented:
 
@@ -30,18 +30,21 @@ Implemented:
 - STATUS register
 - TX_DATA register
 - RX_DATA register
+- real TX FIFO
+- real RX FIFO
+- TX_COUNT register
+- RX_COUNT register
+- FIFO_DEPTH register
 - IRQ_STATUS storage
 - IRQ_ENABLE storage
 - RESET register
+- VMState migration fields for FIFO contents and indexes
 
 Not implemented yet:
 
-- real TX FIFO
-- real RX FIFO
 - processing timer
 - interrupt line
 - QOM debug properties
-- qtest coverage
 - Linux driver
 
 ## Device responsibilities
@@ -58,13 +61,15 @@ Required device guarantees:
 - writable IRQ status bits use write-one-to-clear semantics.
 - FIFO state and STATUS bits remain internally consistent.
 
-## Temporary TX/RX behavior
+## Step 4 FIFO behavior
 
-Milestone 2 does not implement a real FIFO yet.
+Step 4 implements real TX and RX FIFO state, but processing is still
+synchronous. Timer-backed processing is added in Step 5.
 
-For smoke testing, writes to TX_DATA store one byte, immediately process it, and expose the result through RX_DATA.
+Writes to TX_DATA push one byte into the TX FIFO. The device drains TX into RX
+immediately while RX has space.
 
-The temporary processing rule is:
+The current processing rule is:
 
     'a' - 'z' -> 'A' - 'Z'
     other bytes unchanged
@@ -72,12 +77,15 @@ The temporary processing rule is:
 Example:
 
     write TX_DATA = 'h'
+    TX_COUNT      = 0
+    RX_COUNT      = 1
     read RX_DATA  = 'H'
 
 Reading RX_DATA again before another TX_DATA write returns zero because
 STATUS.RX_READY has been cleared.
 
-This behavior will later move behind a real TX FIFO, RX FIFO, processing timer, and IRQ path.
+When RX is full, additional TX_DATA writes accumulate in the TX FIFO. If TX is
+also full, additional TX_DATA writes are rejected and STATUS.ERROR is set.
 
 ## Final FIFO and timer model
 

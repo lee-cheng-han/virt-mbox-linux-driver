@@ -28,9 +28,9 @@ is intentionally simple:
 - FIFO occupancy registers.
 - A soft reset command.
 
-The current QEMU model implements the register surface and a temporary
-single-byte data path. Later milestones replace that temporary path with real TX
-and RX FIFOs, a timer-backed processing delay, and interrupt generation.
+The current QEMU model implements the register surface and real TX/RX FIFO
+state. Later milestones replace synchronous FIFO processing with timer-backed
+processing delay and interrupt generation.
 
 ## QEMU Device Model
 

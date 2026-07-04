@@ -64,7 +64,7 @@ The skeleton validates:
 - VERSION
 - FIFO_DEPTH
 - RESET
-- temporary TX/RX behavior
+- FIFO-backed TX/RX behavior
 - byte `0x00` TX count handling
 
 The skeleton becomes runnable after a QEMU machine or QTest harness maps

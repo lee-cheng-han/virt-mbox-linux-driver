@@ -76,13 +76,14 @@ struct QemuMboxState {
     uint32_t irq_status;
     uint32_t irq_enable;
 
-    /*
-     * Milestone 2 has no real FIFO yet.
-     * These fields provide deterministic TX/RX register behavior.
-     */
-    uint32_t last_tx_data;
-    uint32_t last_rx_data;
-    uint32_t last_tx_valid;
+    uint8_t tx_fifo[QEMU_MBOX_FIFO_DEPTH];
+    uint8_t rx_fifo[QEMU_MBOX_FIFO_DEPTH];
+    uint32_t tx_head;
+    uint32_t tx_tail;
+    uint32_t tx_count;
+    uint32_t rx_head;
+    uint32_t rx_tail;
+    uint32_t rx_count;
 
     uint64_t mmio_read_count;
     uint64_t mmio_write_count;

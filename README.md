@@ -45,7 +45,7 @@ Implemented:
 - QTest skeleton for the minimal MMIO register contract
 - ID, VERSION, CONTROL, STATUS, TX_DATA, RX_DATA, IRQ_STATUS, IRQ_ENABLE,
   TX_COUNT, RX_COUNT, FIFO_DEPTH, and RESET register definitions
-- Temporary single-byte TX/RX behavior for early smoke testing
+- Real TX/RX FIFO state in the QEMU device model
 - Initial repository hygiene CI
 - Concurrency, lifetime-safety, compat ioctl, observability, and robustness
   testing roadmap updates
@@ -59,7 +59,6 @@ Not implemented yet:
 
 - QEMU runtime instantiation in a machine or test harness
 - runnable QTest coverage inside a QEMU checkout
-- Real TX/RX FIFO behavior
 - Processing timer and interrupt line
 - Linux platform character driver
 - `/dev/vmbox0`

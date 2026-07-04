@@ -146,19 +146,24 @@ other bytes unchanged
 This rule exists to make end-to-end tests easy to inspect. It can later be
 replaced by a richer simulated workload without changing the driver API.
 
-## Current Milestone 2 behavior
+## Current Step 4 behavior
 
-Milestone 2 does not implement real FIFO behavior yet.
+Step 4 implements real TX and RX FIFO state. Processing is still synchronous
+until Step 5 adds a timer.
 
-Temporary behavior:
+Current behavior:
 
-- TX_DATA stores one byte.
-- The byte is immediately processed.
+- TX_DATA pushes one byte into the TX FIFO.
+- The device drains TX into RX immediately while RX has free space.
 - RX_DATA returns the processed byte.
 - Reading RX_DATA clears STATUS.RX_READY.
 - Reading RX_DATA while STATUS.RX_READY is clear returns zero.
-- TX_COUNT returns 1 if a byte has been written.
-- RX_COUNT returns 1 if STATUS.RX_READY is set.
+- TX_COUNT returns current TX FIFO occupancy.
+- RX_COUNT returns current RX FIFO occupancy.
+- STATUS.TX_FULL reflects TX FIFO full.
+- STATUS.RX_READY reflects RX FIFO non-empty.
+- STATUS.RX_FULL reflects RX FIFO full.
+- TX_DATA writes while TX FIFO is full are rejected and set STATUS.ERROR.
 - FIFO_DEPTH always returns 16.
 
-Real FIFO behavior is added in Milestone 3.
+Timer-backed processing and IRQ line behavior are added in later steps.
