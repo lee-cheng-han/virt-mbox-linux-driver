@@ -12,6 +12,7 @@ check:
 	test -f .clang-format
 	test -f docs/architecture.md
 	test -f docs/REGISTERS.md
+	test -f docs/concurrency.md
 	test -f docs/register_map.md
 	test -f docs/driver_api.md
 	test -f docs/qemu_device.md

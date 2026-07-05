@@ -56,6 +56,17 @@ static void qemu_mbox_update_status(QemuMboxState *s)
     }
 }
 
+/*
+ * FIFO helper convention:
+ *
+ * - called from the QEMU device context in Step 4
+ * - also callable from the QEMU timer callback once Step 5 adds delayed
+ *   processing
+ * - no pthread locking is needed unless the device is later moved to an
+ *   IOThread or another concurrent host execution context
+ * - helpers update only FIFO storage/index/count state; status, IRQ, and timer
+ *   decisions stay in separate helpers
+ */
 static bool qemu_mbox_fifo_push(uint8_t *fifo, uint32_t *tail,
                                 uint32_t *count, uint8_t value)
 {
@@ -87,9 +98,8 @@ static bool qemu_mbox_fifo_pop(uint8_t *fifo, uint32_t *head,
 static void qemu_mbox_process_pending(QemuMboxState *s)
 {
     /*
-     * FIFO helpers are called from the QEMU device context in Step 4.
-     * No extra host locking is needed unless the device is later moved to an
-     * IOThread or another concurrent execution context.
+     * Step 4 synchronous processing keeps the FIFO model testable before timer
+     * and IRQ support exists. Step 5 moves this drain into a QEMU timer.
      */
     while (s->tx_count > 0 && s->rx_count < QEMU_MBOX_FIFO_DEPTH) {
         uint8_t value;

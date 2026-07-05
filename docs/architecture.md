@@ -106,6 +106,8 @@ and document the exact ordering pair.
 
 ## Concurrency And Locking
 
+Detailed rules are maintained in [concurrency.md](concurrency.md).
+
 The driver will need one per-device state object. That object should contain the
 mapped register base, IRQ number, cdev state, wait queues, locks, and software
 stats.

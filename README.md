@@ -92,6 +92,7 @@ QEMU checkout and building `aarch64-softmmu`.
 - [Architecture](docs/architecture.md)
 - [Register reference](docs/REGISTERS.md)
 - [Legacy register map notes](docs/register_map.md)
+- [Concurrency and locking](docs/concurrency.md)
 - [Driver API](docs/driver_api.md)
 - [QEMU device model](docs/qemu_device.md)
 - [Testing plan](docs/testing.md)

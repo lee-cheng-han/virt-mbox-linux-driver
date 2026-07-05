@@ -92,10 +92,17 @@ Build:
 Goal: lock down the QEMU FIFO helper convention and Linux driver locking model
 before adding real driver I/O.
 
+The design notes live in:
+
+```text
+docs/concurrency.md
+```
+
 Build:
 
 - QEMU FIFO helper caller assumptions
 - QEMU execution-context documentation
+- explicit rationale for no QEMU pthread lock in the current model
 - Linux driver spinlock plan
 - IRQ handler design
 - wait queue condition rules
