@@ -1,7 +1,27 @@
 # Demo Plan
 
-The final demo should show the complete hardware/software stack working from
-userspace down to the QEMU device model.
+The final demo shows the complete hardware/software stack working from
+userspace down to the QEMU device model after the repository fragments are
+applied to full QEMU and Linux source trees.
+
+## Architecture Diagram
+
+```text
+userspace vmbox_test
+        |
+        | open/read/write/poll/ioctl
+        v
+/dev/vmbox0
+        |
+        | Linux vmbox platform driver
+        | sysfs + debugfs observability
+        v
+MMIO registers + IRQ
+        |
+        | QEMU virt-mbox SysBusDevice
+        v
+TX FIFO -> timer processing -> RX FIFO
+```
 
 ## Demo Goals
 
@@ -50,6 +70,34 @@ Target userspace test output:
 All tests passed.
 ```
 
+## Debugfs Sample
+
+```text
+$ cat /sys/kernel/debug/vmbox0/stats
+bytes_read: 1000
+bytes_written: 1000
+irqs: 1000
+errors: 0
+errors_irq_spurious: 0
+errors_fifo_overrun: 0
+errors_fifo_underrun: 0
+tx_full_events: 0
+rx_empty_events: 0
+```
+
+```text
+$ cat /sys/kernel/debug/vmbox0/regs
+id: 0x514d424f
+version: 0x00010000
+control: 0x00000009
+status: 0x00000002
+irq_status: 0x00000000
+irq_enable: 0x0000000f
+tx_count: 0
+rx_count: 1
+fifo_depth: 16
+```
+
 ## Artifacts To Keep
 
 For a polished project page, keep:
@@ -62,6 +110,15 @@ For a polished project page, keep:
 - debugfs sample output
 - CI run link or screenshot
 - short architecture diagram
+
+## Known Limitations
+
+- The QEMU device source is project-owned and still needs to be applied to an
+  external QEMU checkout for compile and QTest execution.
+- The Linux driver source is project-owned and still needs to be applied to an
+  external Linux checkout for module build, boot, and runtime tests.
+- The current driver supports one device instance and one opener.
+- Runtime PM, suspend/resume, DMA, and multi-instance support are future work.
 
 ## Future Work
 

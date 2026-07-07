@@ -2,6 +2,8 @@ VIRTUAL MAILBOX DRIVER AND QEMU DEVICE
 M:	Lee Cheng Han <lee-cheng-han@users.noreply.github.com>
 S:	Maintained
 F:	README.md
+F:	Makefile
+F:	.github/workflows/ci.yml
 F:	docs/
 F:	kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
 F:	kernel/drivers/misc/Kconfig.fragment
@@ -12,5 +14,5 @@ F:	qemu/hw/misc/qemu_mbox.c
 F:	qemu/include/hw/misc/qemu_mbox.h
 F:	qemu/patches/
 F:	qemu/tests/qtest/qemu_mbox-test.c
-F:	scripts/udev/99-vmbox.rules
+F:	scripts/
 F:	tests/

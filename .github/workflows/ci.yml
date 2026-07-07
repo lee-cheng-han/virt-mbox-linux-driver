@@ -34,8 +34,9 @@ jobs:
           test -f docs/testing.md
           test -f docs/bringup.md
           test -f docs/demo.md
+          test -f docs/e2e.md
 
-      - name: Check QEMU source files
+      - name: Check source files
         run: |
           test -f qemu/hw/misc/qemu_mbox.c
           test -f qemu/include/hw/misc/qemu_mbox.h
@@ -46,10 +47,14 @@ jobs:
           test -f qemu/patches/qtest-meson.build.fragment
           test -f qemu/tests/qtest/qemu_mbox-test.c
           test -f kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
+          test -f kernel/drivers/misc/vmbox.c
           test -f kernel/drivers/misc/Kconfig.fragment
           test -f kernel/drivers/misc/Makefile.fragment
+          test -f kernel/include/uapi/linux/vmbox.h
           test -f scripts/udev/99-vmbox.rules
           test -f tests/fuzz/README.md
+          test -f tests/selftests/vmbox_test.c
+          test -f tests/scripts/vmbox_robustness.sh
 
       - name: Check SPDX headers in source files
         run: |
@@ -58,7 +63,11 @@ jobs:
           grep -q "SPDX-License-Identifier" qemu/tests/qtest/qemu_mbox-test.c
           grep -q "SPDX-License-Identifier" docs/REGISTERS.md
           grep -q "SPDX-License-Identifier" kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
+          grep -q "SPDX-License-Identifier" kernel/drivers/misc/vmbox.c
+          grep -q "SPDX-License-Identifier" kernel/include/uapi/linux/vmbox.h
           grep -q "SPDX-License-Identifier" scripts/udev/99-vmbox.rules
+          grep -q "SPDX-License-Identifier" tests/selftests/vmbox_test.c
+          grep -q "SPDX-License-Identifier" tests/scripts/vmbox_robustness.sh
 
       - name: Check for trailing whitespace
         run: |
@@ -77,3 +86,32 @@ jobs:
       - name: Print repository summary
         run: |
           echo "CI v1 passed: repository structure and source hygiene look good."
+
+  userspace-build:
+    name: Userspace build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build userspace tests
+        run: make userspace-build
+
+  static-style:
+    name: Static style plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check formatting drift
+        run: git diff --check
+
+      - name: Check optional static tools
+        run: |
+          command -v clang-format || true
+          command -v sparse || true
+          command -v smatch || true
+          echo "checkpatch.pl runs when this source is applied inside a Linux tree."

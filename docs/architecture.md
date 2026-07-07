@@ -69,13 +69,13 @@ temporary prototype, not for the final device model.
 
 ## Linux Driver
 
-The Linux driver source will be `kernel/drivers/misc/vmbox.c`, with module name
-`vmbox`. It will be a platform character driver matching the device tree
+The Linux driver source is `kernel/drivers/misc/vmbox.c`, with module name
+`vmbox`. It is a platform character driver matching the device tree
 compatible string `virt,mbox` through an `of_device_id` table. The compatible
 string names the current virtual hardware variant; the driver should remain
 platform-agnostic where possible.
 
-The expected driver responsibilities are:
+The driver responsibilities are:
 
 - map the MMIO resource with managed kernel APIs
 - validate ID, VERSION, and FIFO_DEPTH at probe time
@@ -84,6 +84,7 @@ The expected driver responsibilities are:
 - implement blocking and non-blocking `read()` and `write()`
 - implement `poll()` wakeups from the IRQ path
 - expose ioctl commands for reset, status, stats, and mode
+- expose stable sysfs status/fifo-depth attributes
 - expose debugfs state for development and troubleshooting
 
 ## Hardware Access Correctness
@@ -107,7 +108,7 @@ and document the exact ordering pair.
 
 Detailed rules are maintained in [concurrency.md](concurrency.md).
 
-The driver will need one per-device state object. That object should contain the
+The driver uses one per-device state object. That object contains the
 mapped register base, IRQ number, cdev state, wait queues, locks, and software
 stats.
 
@@ -234,7 +235,7 @@ Userspace owns integration behavior:
 
 ## Source-Tree Hygiene
 
-Planned kernel integration files:
+Kernel integration files:
 
 - `kernel/drivers/misc/vmbox.c`
 - `kernel/include/uapi/linux/vmbox.h`

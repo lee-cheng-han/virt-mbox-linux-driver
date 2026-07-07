@@ -1,6 +1,6 @@
 # Driver API
 
-The final Linux driver will expose one character device:
+The Linux driver exposes one character device:
 
 ```text
 /dev/vmbox0
@@ -11,7 +11,7 @@ interface.
 
 ## File Operations
 
-Planned operations:
+Implemented operations:
 
 | Operation | Behavior |
 |---|---|
@@ -23,7 +23,7 @@ Planned operations:
 | `unlocked_ioctl()` | Handle reset, status, stats, and mode commands. |
 | `llseek()` | Use `no_llseek`. |
 
-The initial implementation should allow only one open file at a time. A second
+The implementation allows only one open file at a time. A second
 open should fail with `-EBUSY`. This is the documented policy for the first
 version because the device exposes one shared FIFO pair.
 
@@ -46,7 +46,7 @@ full request immediately.
 
 ## Poll Semantics
 
-Planned `poll()` readiness:
+Implemented `poll()` readiness:
 
 | Condition | Mask |
 |---|---|
@@ -145,7 +145,7 @@ Source comment:
 
 ## Driver State
 
-The driver should use one per-device state object. Planned fields:
+The driver uses one per-device state object. Important fields:
 
 - `struct device *dev`
 - mapped MMIO base pointer
@@ -158,7 +158,7 @@ The driver should use one per-device state object. Planned fields:
 - cached FIFO depth
 - stats counters
 - `device_gone` lifetime flag
-- reference object such as `kref` or `refcount_t`
+- `kref` lifetime object
 
 The driver should avoid global mutable state except for class/device-number
 allocation needed by the character device framework.
@@ -177,15 +177,15 @@ Expected userspace-facing errors:
 | Invalid ioctl argument | `-EINVAL` |
 | Device removed or unavailable | `-ENODEV` |
 
-## Debugfs Plan
+## Debugfs ABI
 
-Development builds should expose debugfs entries under:
+Development builds expose debugfs entries under:
 
 ```text
 /sys/kernel/debug/vmbox0/
 ```
 
-Planned entries:
+Entries:
 
 - `stats`
 - `regs`
@@ -193,13 +193,13 @@ Planned entries:
 
 Debugfs is diagnostic only and must not be required for normal operation.
 
-## Sysfs Plan
+## Sysfs ABI
 
-The driver should also expose a minimal stable sysfs attribute group under the
+The driver exposes a minimal stable sysfs attribute group under the
 platform device. Unlike debugfs, sysfs is a stable user-visible ABI and should
 only expose simple, documented values that are safe to support long term.
 
-Planned read-only attributes:
+Read-only attributes:
 
 - `status`
 - `fifo_depth`
@@ -221,7 +221,7 @@ The `VMBOX_IOC_GET_STATS` ioctl and debugfs `stats` file should both expose:
 
 ## Access And Permissions
 
-Tests should not rely on running as root. The planned udev rule is:
+Tests should not rely on running as root. The udev rule is:
 
 ```text
 scripts/udev/99-vmbox.rules

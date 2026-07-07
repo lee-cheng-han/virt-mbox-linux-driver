@@ -3,7 +3,7 @@
 # Concurrency And Locking
 
 This document records the execution-context assumptions for the virtual mailbox
-device model and the planned Linux `vmbox` driver. The goal is to keep FIFO,
+device model and the Linux `vmbox` driver. The goal is to keep FIFO,
 timer, IRQ, and blocking I/O behavior reviewable as the project grows.
 
 ## QEMU Device Model

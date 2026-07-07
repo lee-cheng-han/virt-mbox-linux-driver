@@ -33,10 +33,10 @@ Implemented:
 - Repository skeleton and architecture documentation
 - Register map contract for `vmbox`, including reset, FIFO, IRQ, and
   invalid-access semantics
-- Planned Linux driver API and ioctl UAPI structures
-- Planned driver/module naming: `vmbox`
-- Planned device node: `/dev/vmbox0`
-- Planned devicetree compatible string: `virt,mbox`
+- Linux driver API and ioctl UAPI structures
+- Driver/module naming: `vmbox`
+- Character device node: `/dev/vmbox0`
+- Devicetree compatible string: `virt,mbox`
 - Canonical register reference in `docs/REGISTERS.md`
 - Devicetree binding schema draft for `virt,mbox`
 - Testing, bring-up, and demo plans
@@ -54,25 +54,28 @@ Implemented:
 - `/dev/vmbox0` registration with single-open `open()`/`release()` policy
 - Basic `/dev/vmbox0` read/write data movement over MMIO
 - Blocking/non-blocking read/write behavior, `poll()`, and ioctl UAPI
+- Stable sysfs attributes and debugfs diagnostics for the Linux driver
+- Userspace regression test and robustness smoke-test scripts
+- CI jobs for repo hygiene, userspace build, and static-style scaffolding
+- End-to-end bring-up and final demo documentation
 - Module init/exit cleanup for char-device and platform-driver state
 - Initial repository hygiene CI
 - Concurrency, lifetime-safety, compat ioctl, observability, and robustness
   testing roadmap updates
 - QEMU VMState/migration requirements documented
-- Planned sysfs attributes alongside debugfs
-- UAPI struct size guard requirements
+- sysfs attributes alongside debugfs
+- UAPI struct size guards
 - Single-open `/dev/vmbox0` policy
 - `.clang-format` and `MAINTAINERS` project hygiene files
 
-Not implemented yet:
+External validation still left:
 
 - QEMU runtime instantiation in a machine or test harness
 - runnable QTest coverage inside a QEMU checkout
-- sysfs/debugfs observability
-- userspace regression tests
-- full build and boot CI
+- external Linux kernel module build
+- full QEMU boot/runtime CI
 
-## Planned Milestones
+## Completed Repository Milestones
 
 1. Lock down architecture, register map, driver API, and testing docs.
 2. Integrate the minimal QEMU MMIO device into a QEMU source tree.
@@ -88,11 +91,10 @@ Not implemented yet:
 10. Expand CI to build QEMU, build the kernel module, run QTest, and run
     Linux-side tests.
 
-Step 0, the project contract and planning milestone, is complete. Step 1, the
-source-level minimal QEMU MMIO device alignment, is complete. Step 2, the QEMU
-integration package for applying the device to a real QEMU checkout, is complete
-for this repository. The next verification task is applying it to an external
-QEMU checkout and building `aarch64-softmmu`.
+The in-repository implementation milestones are complete. The remaining work is
+external validation: applying the QEMU pieces to a real QEMU checkout, applying
+the Linux driver pieces to a real kernel checkout, building both, booting the
+stack, and running the guest tests.
 
 ## Documentation
 
@@ -105,6 +107,17 @@ QEMU checkout and building `aarch64-softmmu`.
 - [Testing plan](docs/testing.md)
 - [Bring-up guide](docs/bringup.md)
 - [Demo plan](docs/demo.md)
+- [End-to-end bring-up](docs/e2e.md)
+
+## Quick Local Checks
+
+```sh
+make check
+```
+
+This validates repository hygiene and builds the userspace regression test. Full
+runtime validation still requires applying the QEMU and Linux fragments to real
+source trees and booting the stack.
 
 ## License
 
@@ -114,12 +127,12 @@ intended to become part of a QEMU patch.
 
 ## Final Project Summary
 
-Implemented a QEMU-emulated MMIO mailbox peripheral and Linux platform
+This repository implements a QEMU-emulated MMIO mailbox peripheral and Linux platform
 character driver exposing `/dev/vmbox0`, with FIFO-backed data paths, explicit
 concurrency and locking design, safe remove/unbind lifetime handling, module
 unload safety, portable MMIO access using `readl()`/`writel()`,
 interrupt-driven blocking I/O, `poll()`/`ioctl()`/`compat_ioctl` support,
 debugfs instrumentation, production-style error counters, devicetree binding
 schema, QTest hardware-model coverage, userspace regression tests, ioctl
-fuzzing, static-analysis CI, sanitizer-based runtime testing, and end-to-end
-QEMU boot validation.
+fuzzing, static-analysis CI scaffolding, sanitizer runtime-test planning, and
+end-to-end QEMU boot validation docs.

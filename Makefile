@@ -1,8 +1,13 @@
-.PHONY: help check
+.PHONY: help check userspace-build
 
 help:
 	@echo "Available targets:"
 	@echo "  make check    Run local repository hygiene checks"
+	@echo "  make userspace-build"
+	@echo "                Build userspace regression tests"
+
+userspace-build:
+	$(CC) -Wall -Wextra -O2 -Ikernel/include -o /tmp/vmbox_test tests/selftests/vmbox_test.c
 
 check:
 	test -f README.md
@@ -19,6 +24,7 @@ check:
 	test -f docs/testing.md
 	test -f docs/bringup.md
 	test -f docs/demo.md
+	test -f docs/e2e.md
 	test -f qemu/hw/misc/qemu_mbox.c
 	test -f qemu/include/hw/misc/qemu_mbox.h
 	test -f qemu/patches/README.md
@@ -34,6 +40,8 @@ check:
 	test -f kernel/include/uapi/linux/vmbox.h
 	test -f scripts/udev/99-vmbox.rules
 	test -f tests/fuzz/README.md
+	test -f tests/selftests/vmbox_test.c
+	test -f tests/scripts/vmbox_robustness.sh
 	grep -q "SPDX-License-Identifier" qemu/hw/misc/qemu_mbox.c
 	grep -q "SPDX-License-Identifier" qemu/include/hw/misc/qemu_mbox.h
 	grep -q "SPDX-License-Identifier" qemu/tests/qtest/qemu_mbox-test.c
@@ -42,6 +50,8 @@ check:
 	grep -q "SPDX-License-Identifier" kernel/drivers/misc/vmbox.c
 	grep -q "SPDX-License-Identifier" kernel/include/uapi/linux/vmbox.h
 	grep -q "SPDX-License-Identifier" scripts/udev/99-vmbox.rules
+	grep -q "SPDX-License-Identifier" tests/selftests/vmbox_test.c
+	grep -q "SPDX-License-Identifier" tests/scripts/vmbox_robustness.sh
 	@if git grep -n '[[:blank:]]$$' -- '*.c' '*.h' '*.md' '*.yml' '*.yaml' '*.fragment' '*.rules'; then \
 		echo "Trailing whitespace found"; \
 		exit 1; \
@@ -51,3 +61,4 @@ check:
 		exit 1; \
 	fi
 	git diff --check
+	$(MAKE) userspace-build

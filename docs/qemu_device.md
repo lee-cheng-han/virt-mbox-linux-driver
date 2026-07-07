@@ -6,11 +6,11 @@ The emulated hardware device is named:
 
     virt-mbox
 
-The Linux-facing driver/device name will later be:
+The Linux-facing driver/device name is:
 
     vmbox
 
-The eventual character device node will be:
+The character device node is:
 
     /dev/vmbox0
 
@@ -44,10 +44,9 @@ Implemented:
 - RESET register
 - VMState migration fields for FIFO contents and indexes
 
-Not implemented yet:
+Not implemented in the QEMU device model:
 
 - QOM debug properties
-- Linux driver
 
 ## Device responsibilities
 
@@ -142,9 +141,9 @@ They are intended to become a patch against a real QEMU source tree:
     qemu/patches/Kconfig.fragment
     qemu/patches/aarch64-softmmu.default.mak.fragment
 
-The first integration target is build-system wiring. Runtime instantiation will
-follow after the minimal build path is documented and testable.
+The next integration target is applying this source to a real QEMU checkout,
+building `aarch64-softmmu`, and wiring runtime instantiation into a machine or
+test harness.
 
 The source filenames still use `qemu_mbox` from the initial milestones. The
-Linux-facing product name is `vmbox`, and the QEMU type string is planned as
-`virt-mbox`.
+Linux-facing product name is `vmbox`, and the QEMU type string is `virt-mbox`.

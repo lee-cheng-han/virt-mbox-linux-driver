@@ -6,6 +6,7 @@
 #include <linux/bitops.h>
 #include <linux/build_bug.h>
 #include <linux/cdev.h>
+#include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/fs.h>
@@ -17,6 +18,7 @@
 #include <linux/of.h>
 #include <linux/poll.h>
 #include <linux/platform_device.h>
+#include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/spinlock.h>
@@ -70,6 +72,7 @@ struct vmbox_dev {
 	struct device *dev;
 	struct device *chrdev;
 	struct cdev cdev;
+	struct dentry *debugfs_dir;
 	dev_t devt;
 	void __iomem *regs;
 	int irq;
@@ -188,6 +191,143 @@ static void vmbox_stats_add_written(struct vmbox_dev *vmbox, size_t count)
 	spin_lock_irqsave(&vmbox->stats_lock, flags);
 	vmbox->stats.bytes_written += count;
 	spin_unlock_irqrestore(&vmbox->stats_lock, flags);
+}
+
+static ssize_t status_show(struct device *dev, struct device_attribute *attr,
+			   char *buf)
+{
+	struct vmbox_dev *vmbox = dev_get_drvdata(dev);
+	u32 status;
+
+	if (!vmbox || READ_ONCE(vmbox->device_gone))
+		return -ENODEV;
+
+	mutex_lock(&vmbox->lock);
+	status = vmbox_readl(vmbox, VMBOX_REG_STATUS);
+	mutex_unlock(&vmbox->lock);
+
+	return sysfs_emit(buf, "0x%08x\n", status);
+}
+static DEVICE_ATTR_RO(status);
+
+static ssize_t fifo_depth_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct vmbox_dev *vmbox = dev_get_drvdata(dev);
+
+	if (!vmbox || READ_ONCE(vmbox->device_gone))
+		return -ENODEV;
+
+	return sysfs_emit(buf, "%u\n", vmbox->fifo_depth);
+}
+static DEVICE_ATTR_RO(fifo_depth);
+
+static struct attribute *vmbox_attrs[] = {
+	&dev_attr_status.attr,
+	&dev_attr_fifo_depth.attr,
+	NULL,
+};
+
+static const struct attribute_group vmbox_attr_group = {
+	.attrs = vmbox_attrs,
+};
+
+static int vmbox_debugfs_stats_show(struct seq_file *s, void *unused)
+{
+	struct vmbox_dev *vmbox = s->private;
+	struct vmbox_stats stats;
+	unsigned long flags;
+
+	spin_lock_irqsave(&vmbox->stats_lock, flags);
+	stats = vmbox->stats;
+	spin_unlock_irqrestore(&vmbox->stats_lock, flags);
+
+	seq_printf(s, "bytes_read: %llu\n", stats.bytes_read);
+	seq_printf(s, "bytes_written: %llu\n", stats.bytes_written);
+	seq_printf(s, "irqs: %llu\n", stats.irqs);
+	seq_printf(s, "errors: %llu\n", stats.errors);
+	seq_printf(s, "errors_irq_spurious: %llu\n",
+		   stats.errors_irq_spurious);
+	seq_printf(s, "errors_fifo_overrun: %llu\n",
+		   stats.errors_fifo_overrun);
+	seq_printf(s, "errors_fifo_underrun: %llu\n",
+		   stats.errors_fifo_underrun);
+	seq_printf(s, "tx_full_events: %llu\n", stats.tx_full_events);
+	seq_printf(s, "rx_empty_events: %llu\n", stats.rx_empty_events);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(vmbox_debugfs_stats);
+
+static int vmbox_debugfs_regs_show(struct seq_file *s, void *unused)
+{
+	struct vmbox_dev *vmbox = s->private;
+
+	mutex_lock(&vmbox->lock);
+	if (vmbox->device_gone) {
+		mutex_unlock(&vmbox->lock);
+		return -ENODEV;
+	}
+
+	seq_printf(s, "id: 0x%08x\n", vmbox_readl(vmbox, VMBOX_REG_ID));
+	seq_printf(s, "version: 0x%08x\n",
+		   vmbox_readl(vmbox, VMBOX_REG_VERSION));
+	seq_printf(s, "control: 0x%08x\n",
+		   vmbox_readl(vmbox, VMBOX_REG_CONTROL));
+	seq_printf(s, "status: 0x%08x\n",
+		   vmbox_readl(vmbox, VMBOX_REG_STATUS));
+	seq_printf(s, "irq_status: 0x%08x\n",
+		   vmbox_readl(vmbox, VMBOX_REG_IRQ_STATUS));
+	seq_printf(s, "irq_enable: 0x%08x\n",
+		   vmbox_readl(vmbox, VMBOX_REG_IRQ_ENABLE));
+	seq_printf(s, "tx_count: %u\n",
+		   vmbox_readl(vmbox, VMBOX_REG_TX_COUNT));
+	seq_printf(s, "rx_count: %u\n",
+		   vmbox_readl(vmbox, VMBOX_REG_RX_COUNT));
+	seq_printf(s, "fifo_depth: %u\n",
+		   vmbox_readl(vmbox, VMBOX_REG_FIFO_DEPTH));
+	mutex_unlock(&vmbox->lock);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(vmbox_debugfs_regs);
+
+static int vmbox_debugfs_fifo_show(struct seq_file *s, void *unused)
+{
+	struct vmbox_dev *vmbox = s->private;
+
+	mutex_lock(&vmbox->lock);
+	if (vmbox->device_gone) {
+		mutex_unlock(&vmbox->lock);
+		return -ENODEV;
+	}
+
+	seq_printf(s, "tx_count: %u\n",
+		   vmbox_readl(vmbox, VMBOX_REG_TX_COUNT));
+	seq_printf(s, "rx_count: %u\n",
+		   vmbox_readl(vmbox, VMBOX_REG_RX_COUNT));
+	seq_printf(s, "fifo_depth: %u\n", vmbox->fifo_depth);
+	mutex_unlock(&vmbox->lock);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(vmbox_debugfs_fifo);
+
+static void vmbox_debugfs_create(struct vmbox_dev *vmbox)
+{
+	vmbox->debugfs_dir = debugfs_create_dir(VMBOX_DEV_NAME, NULL);
+	if (IS_ERR(vmbox->debugfs_dir)) {
+		vmbox->debugfs_dir = NULL;
+		dev_dbg(vmbox->dev, "debugfs unavailable\n");
+		return;
+	}
+
+	debugfs_create_file("stats", 0444, vmbox->debugfs_dir, vmbox,
+			    &vmbox_debugfs_stats_fops);
+	debugfs_create_file("regs", 0444, vmbox->debugfs_dir, vmbox,
+			    &vmbox_debugfs_regs_fops);
+	debugfs_create_file("fifo", 0444, vmbox->debugfs_dir, vmbox,
+			    &vmbox_debugfs_fifo_fops);
 }
 
 static irqreturn_t vmbox_irq(int irq, void *data)
@@ -596,6 +736,8 @@ static void vmbox_teardown(struct vmbox_dev *vmbox)
 	mutex_unlock(&vmbox->lock);
 
 	vmbox_chrdev_unregister(vmbox);
+	debugfs_remove_recursive(vmbox->debugfs_dir);
+	vmbox->debugfs_dir = NULL;
 	vmbox_hw_disable(vmbox);
 	if (vmbox->irq_requested) {
 		synchronize_irq(vmbox->irq);
@@ -673,6 +815,15 @@ static int vmbox_probe(struct platform_device *pdev)
 		goto err_teardown;
 	}
 
+	ret = sysfs_create_group(&pdev->dev.kobj, &vmbox_attr_group);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs attributes: %d\n",
+			ret);
+		goto err_teardown;
+	}
+
+	vmbox_debugfs_create(vmbox);
+
 	dev_info(&pdev->dev, "probed fifo_depth=%u irq=%d\n",
 		 vmbox->fifo_depth, vmbox->irq);
 
@@ -691,6 +842,7 @@ static void vmbox_remove(struct platform_device *pdev)
 	struct vmbox_dev *vmbox = platform_get_drvdata(pdev);
 
 	platform_set_drvdata(pdev, NULL);
+	sysfs_remove_group(&pdev->dev.kobj, &vmbox_attr_group);
 	vmbox_teardown(vmbox);
 	kref_put(&vmbox->refcount, vmbox_release);
 }

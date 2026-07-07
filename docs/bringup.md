@@ -178,7 +178,7 @@ still requires applying the integration package to a real QEMU checkout.
 
 Goal: Linux can probe the device.
 
-Planned files:
+Files:
 
 - `kernel/drivers/misc/vmbox.c`
 - `kernel/include/uapi/linux/vmbox.h`
@@ -356,6 +356,10 @@ Logging requirements:
 - log probe/remove errors clearly
 - keep normal read/write paths quiet
 
+Status: implemented in the driver skeleton. Sysfs exposes `status` and
+`fifo_depth`; debugfs exposes `stats`, `regs`, and `fifo`; logging uses
+`dev_err()` and `dev_info()` and normal read/write paths remain quiet.
+
 ## Step 15: Userspace Test Suite
 
 Goal: test `/dev/vmbox0`.
@@ -378,6 +382,10 @@ Add tests for:
 - stress 1000 messages
 - udev or device-class permission setup for non-root test users
 
+Status: implemented as `tests/selftests/vmbox_test.c`, with udev permissions
+provided by `scripts/udev/99-vmbox.rules`. The test builds in local CI and runs
+inside a booted guest with `/dev/vmbox0`.
+
 ## Step 15.5: Robustness And Negative Testing
 
 Goal: test teardown paths, compat ioctl, ioctl fuzzing, and blocked I/O failure
@@ -392,6 +400,11 @@ Build:
 - 32-bit compat ioctl test if supported
 - ioctl fuzz test
 - dmesg scan for kernel warnings and errors
+
+Status: implemented as robustness scaffolding in
+`tests/scripts/vmbox_robustness.sh` plus the bounded ioctl fuzz plan in
+`tests/fuzz/README.md`. Full remove/unbind execution requires a booted kernel
+with the driver loaded.
 
 ## Step 16: CI Expansion
 
@@ -412,6 +425,10 @@ Stages:
 Style and static analysis should include `.clang-format`,
 `checkpatch.pl --strict`, `sparse`, and optional `smatch`.
 
+Status: CI now includes repository hygiene, userspace test build, and
+static-style scaffolding. Kernel/QEMU compile, QTest, boot, and full runtime CI
+remain external integration jobs once real source checkouts are available.
+
 ## Step 16.5: Runtime Sanitizer CI
 
 Goal: catch memory safety issues during real driver execution.
@@ -424,6 +441,10 @@ Build:
 - ioctl fuzz tests
 - remove/unbind tests
 - dmesg and debugfs report scanning
+
+Status: documented in `docs/e2e.md`; the robustness script scans dmesg for
+kernel warnings and sanitizer findings. Actual KASAN/kmemleak execution needs a
+sanitizer-enabled guest kernel.
 
 ## Step 17: End-To-End Bring-Up
 
@@ -440,6 +461,9 @@ userspace test suite runs
 all tests pass
 ```
 
+Status: documented in `docs/e2e.md`, including command shape and guest
+validation commands.
+
 ## Step 18: Final Demo And Polish
 
 Goal: make it portfolio-ready.
@@ -455,3 +479,6 @@ Add:
 - known limitations
 - future work
 - MAINTAINERS entry
+
+Status: final documentation, demo notes, known limitations, and MAINTAINERS
+coverage are present in this repository.
