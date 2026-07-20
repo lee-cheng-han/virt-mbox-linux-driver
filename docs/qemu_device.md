@@ -140,10 +140,14 @@ They are intended to become a patch against a real QEMU source tree:
     qemu/patches/meson.build.fragment
     qemu/patches/Kconfig.fragment
     qemu/patches/aarch64-softmmu.default.mak.fragment
+    qemu/patches/virt-demo.patch
 
-The next integration target is applying this source to a real QEMU checkout,
-building `aarch64-softmmu`, and wiring runtime instantiation into a machine or
-test harness.
+The local ARM64 demo applies this source to a real QEMU checkout, builds
+`aarch64-softmmu`, and wires runtime instantiation into the ARM `virt` machine.
+`scripts/run-arm64-demo.sh` applies that temporary machine edit idempotently;
+`qemu/patches/virt-demo.patch` keeps the same change visible for review. The
+demo wiring maps `virt-mbox` at `0x09100000` and emits a matching devicetree
+node for the Linux platform driver.
 
 The source filenames still use `qemu_mbox` from the initial milestones. The
 Linux-facing product name is `vmbox`, and the QEMU type string is `virt-mbox`.

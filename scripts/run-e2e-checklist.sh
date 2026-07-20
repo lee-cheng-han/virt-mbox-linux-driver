@@ -5,11 +5,18 @@ set -eu
 cat <<'EOF'
 vmbox end-to-end checklist
 
+Fast path:
+   scripts/run-arm64-demo.sh ~/qemu ~/work/linux
+
+The captured passing output from that script is docs/demo-output.txt.
+
+Manual path:
+
 1. Apply QEMU payload:
-   scripts/apply-qemu.sh ~/work/qemu
+   scripts/apply-qemu.sh ~/qemu
 
 2. Build QEMU:
-   cd ~/work/qemu
+   cd ~/qemu
    mkdir -p build
    cd build
    ../configure --target-list=aarch64-softmmu

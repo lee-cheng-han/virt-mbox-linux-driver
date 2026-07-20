@@ -46,6 +46,22 @@ append_if_missing() {
     echo "updated: $target"
 }
 
+update_qemu_meson() {
+    fragment="$repo_root/qemu/patches/meson.build.fragment"
+    target="$qemu_tree/hw/misc/meson.build"
+
+    need_file "$fragment"
+    need_file "$target"
+
+    if grep -q "softmmu_ss.add(when: 'CONFIG_QEMU_MBOX'" "$target"; then
+        sed -i "s/softmmu_ss.add(when: 'CONFIG_QEMU_MBOX'/system_ss.add(when: 'CONFIG_QEMU_MBOX'/" "$target"
+        echo "updated legacy softmmu_ss entry: $target"
+        return
+    fi
+
+    append_if_missing "qemu_mbox.c" "$fragment" "$target"
+}
+
 need_dir "$qemu_tree/hw/misc"
 need_dir "$qemu_tree/include/hw/misc"
 need_dir "$qemu_tree/tests/qtest"
@@ -56,9 +72,7 @@ cp "$repo_root/qemu/include/hw/misc/qemu_mbox.h" \
 cp "$repo_root/qemu/tests/qtest/qemu_mbox-test.c" \
    "$qemu_tree/tests/qtest/qemu_mbox-test.c"
 
-append_if_missing "qemu_mbox.c" \
-    "$repo_root/qemu/patches/meson.build.fragment" \
-    "$qemu_tree/hw/misc/meson.build"
+update_qemu_meson
 append_if_missing "config QEMU_MBOX" \
     "$repo_root/qemu/patches/Kconfig.fragment" \
     "$qemu_tree/hw/misc/Kconfig"

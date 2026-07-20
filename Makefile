@@ -24,6 +24,7 @@ check:
 	test -f docs/testing.md
 	test -f docs/bringup.md
 	test -f docs/demo.md
+	test -f docs/demo-output.txt
 	test -f docs/e2e.md
 	test -f qemu/hw/misc/qemu_mbox.c
 	test -f qemu/include/hw/misc/qemu_mbox.h
@@ -32,6 +33,7 @@ check:
 	test -f qemu/patches/Kconfig.fragment
 	test -f qemu/patches/aarch64-softmmu.default.mak.fragment
 	test -f qemu/patches/qtest-meson.build.fragment
+	test -f qemu/patches/virt-demo.patch
 	test -f qemu/tests/qtest/qemu_mbox-test.c
 	test -f kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml
 	test -f kernel/drivers/misc/vmbox.c
@@ -44,7 +46,9 @@ check:
 	test -f scripts/apply-linux.sh
 	test -f scripts/build-userspace.sh
 	test -f scripts/run-e2e-checklist.sh
+	test -f scripts/run-arm64-demo.sh
 	test -f tests/fuzz/README.md
+	test -f tests/demo/vmbox_init.c
 	test -f tests/selftests/vmbox_test.c
 	test -f tests/scripts/vmbox_robustness.sh
 	grep -q "SPDX-License-Identifier" qemu/hw/misc/qemu_mbox.c
@@ -59,6 +63,8 @@ check:
 	grep -q "SPDX-License-Identifier" scripts/apply-linux.sh
 	grep -q "SPDX-License-Identifier" scripts/build-userspace.sh
 	grep -q "SPDX-License-Identifier" scripts/run-e2e-checklist.sh
+	grep -q "SPDX-License-Identifier" scripts/run-arm64-demo.sh
+	grep -q "SPDX-License-Identifier" tests/demo/vmbox_init.c
 	grep -q "SPDX-License-Identifier" tests/selftests/vmbox_test.c
 	grep -q "SPDX-License-Identifier" tests/scripts/vmbox_robustness.sh
 	@if git grep -n '[[:blank:]]$$' -- '*.c' '*.h' '*.md' '*.yml' '*.yaml' '*.fragment' '*.rules'; then \

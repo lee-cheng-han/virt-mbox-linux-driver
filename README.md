@@ -1,151 +1,208 @@
-# Embedded Linux Character Driver for a QEMU MMIO Device
+# QEMU Linux MMIO Character Driver
 
-This project builds an industry-style embedded Linux driver stack around a
-custom QEMU-emulated memory-mapped mailbox device.
+An end-to-end embedded Linux driver project built around a custom
+QEMU-emulated MMIO mailbox device.
 
-The goal is not only to expose a `/dev` node. The finished stack should define
-a hardware/software contract, implement a QEMU MMIO device model, provide a
-Linux platform character driver, support interrupt-driven blocking I/O, expose
-observability hooks, and include tests at the QEMU and Linux userspace layers.
+The project implements both sides of the stack: a QEMU `SysBusDevice` named
+`virt-mbox` and a Linux platform character driver named `vmbox`. The driver
+exposes `/dev/vmbox0` and supports FIFO-backed read/write, interrupt-driven
+blocking I/O, `poll()`, ioctl status/statistics, sysfs attributes, and debugfs
+diagnostics.
 
-## Target Stack
+## What This Demonstrates
+
+This repository is intended to look and behave like a real kernel/QEMU bring-up
+project, not just a toy `/dev` example. It includes:
+
+- a documented MMIO register contract
+- a QEMU device model with FIFOs, IRQ state, timer-backed processing, and
+  VMState migration support
+- a Linux platform driver using `readl()`/`writel()`, IRQ handling, wait queues,
+  character-device registration, and safe remove/unload lifetime rules
+- stable userspace UAPI structs with ABI size guards
+- sysfs attributes for stable observability and debugfs files for developer
+  diagnostics
+- a single-open `/dev/vmbox0` policy with documented semantics
+- QEMU/Linux integration helper scripts
+- userspace regression and robustness test scaffolding
+- a working ARM64 QEMU boot demo with captured output
+
+## Architecture
 
 ```text
-userspace tests and demo tools
+guest demo test / userspace tools
         |
         | open(), read(), write(), poll(), ioctl()
         v
 /dev/vmbox0
         |
-        | Linux platform character driver
+        | Linux vmbox platform character driver
+        | sysfs + debugfs observability
         v
-MMIO registers and IRQ
+MMIO registers + interrupt
         |
         | readl(), writel()
         v
 QEMU virt-mbox SysBusDevice
+        |
+        v
+TX FIFO -> timer processing -> RX FIFO
 ```
 
-## Current Status
+The demo writes `hello` to `/dev/vmbox0`. The QEMU device processes bytes
+through its TX/RX FIFO path and returns `HELLO`, proving the userspace, Linux
+driver, MMIO register map, IRQ path, and QEMU device model are working together.
 
-Implemented:
+## How It Works
 
-- Repository skeleton and architecture documentation
-- Register map contract for `vmbox`, including reset, FIFO, IRQ, and
-  invalid-access semantics
-- Linux driver API and ioctl UAPI structures
-- Driver/module naming: `vmbox`
-- Character device node: `/dev/vmbox0`
-- Devicetree compatible string: `virt,mbox`
-- Canonical register reference in `docs/REGISTERS.md`
-- Devicetree binding schema draft for `virt,mbox`
-- Testing, bring-up, and demo plans
-- Initial QEMU MMIO device source files
-- QEMU integration notes and Meson/Kconfig/device-enable fragments
-- QTest skeleton for MMIO, FIFO, timer, and IRQ register behavior
-- ID, VERSION, CONTROL, STATUS, TX_DATA, RX_DATA, IRQ_STATUS, IRQ_ENABLE,
-  TX_COUNT, RX_COUNT, FIFO_DEPTH, and RESET register definitions
-- Real TX/RX FIFO state in the QEMU device model
-- Timer-backed QEMU processing path with BUSY status
-- QEMU IRQ line support with sticky IRQ_STATUS and IRQ_ENABLE masking
-- Linux `vmbox` platform driver skeleton with MMIO probe validation and IRQ
-  request
-- Initial Linux driver lifetime state for safe remove/unbind handling
-- `/dev/vmbox0` registration with single-open `open()`/`release()` policy
-- Basic `/dev/vmbox0` read/write data movement over MMIO
-- Blocking/non-blocking read/write behavior, `poll()`, and ioctl UAPI
-- Stable sysfs attributes and debugfs diagnostics for the Linux driver
-- Userspace regression test and robustness smoke-test scripts
-- CI jobs for repo hygiene, userspace build, and static-style scaffolding
-- End-to-end bring-up and final demo documentation
-- Module init/exit cleanup for char-device and platform-driver state
-- Initial repository hygiene CI
-- Concurrency, lifetime-safety, compat ioctl, observability, and robustness
-  testing roadmap updates
-- QEMU VMState/migration requirements documented
-- sysfs attributes alongside debugfs
-- UAPI struct size guards
-- Single-open `/dev/vmbox0` policy
-- `.clang-format` and `MAINTAINERS` project hygiene files
+The hardware/software contract is a small MMIO register map. The guest driver
+discovers the device through a devicetree node with `compatible = "virt,mbox"`,
+maps the register window, validates the device ID/version registers, and enables
+interrupts.
 
-External validation still left:
+Data flows through two FIFOs:
 
-- QEMU runtime instantiation in a machine or test harness
-- runnable QTest coverage inside a QEMU checkout
-- external Linux kernel module build
-- full QEMU boot/runtime CI
+- userspace writes bytes to `/dev/vmbox0`
+- the Linux driver writes each byte to the QEMU device `TX_DATA` register
+- QEMU queues bytes in its TX FIFO and schedules timer-backed processing
+- processed bytes move into the QEMU RX FIFO
+- QEMU raises an interrupt when RX data is ready
+- the Linux IRQ handler wakes readers and poll waiters
+- userspace reads the processed bytes from `/dev/vmbox0`
 
-## Completed Repository Milestones
+The demo processing transform is intentionally simple and deterministic:
+lowercase ASCII bytes are returned as uppercase bytes. That makes the end-to-end
+test easy to inspect: writing `hello` should read back `HELLO`.
 
-1. Lock down architecture, register map, driver API, and testing docs.
-2. Integrate the minimal QEMU MMIO device into a QEMU source tree.
-3. Add QTest skeleton coverage for ID, VERSION, RESET, and basic register
-   behavior.
-4. Replace temporary TX/RX behavior with real 16-byte TX and RX FIFOs.
-5. Add processing latency and IRQ generation.
-6. Implement the Linux `vmbox` platform character driver probe and remove
-   paths.
-7. Add `/dev/vmbox0` read, write, non-blocking mode, and poll support.
-8. Add ioctl commands for reset, status, stats, and mode configuration.
-9. Add debugfs observability and stress tests.
-10. Expand CI to build QEMU, build the kernel module, run QTest, and run
-    Linux-side tests.
+The driver also exposes ioctl status/statistics, stable sysfs attributes, and
+debugfs diagnostic files so the runtime state can be inspected without
+instrumenting the data path.
 
-The in-repository implementation milestones are complete. The remaining work is
-external validation: applying the QEMU pieces to a real QEMU checkout, applying
-the Linux driver pieces to a real kernel checkout, building both, booting the
-stack, and running the guest tests.
+## Repository Layout
 
-## Documentation
+```text
+qemu/                 QEMU device source, headers, and integration fragments
+kernel/               Linux driver, UAPI header, Kconfig/Makefile fragments
+docs/                 architecture, register map, driver API, demo logs
+tests/                userspace tests, robustness scripts, demo init program
+scripts/              apply/build/demo helper scripts
+.github/workflows/   repository hygiene and userspace build CI
+```
 
-- [Architecture](docs/architecture.md)
-- [Register reference](docs/REGISTERS.md)
-- [Legacy register map notes](docs/register_map.md)
-- [Concurrency and locking](docs/concurrency.md)
-- [Driver API](docs/driver_api.md)
-- [QEMU device model](docs/qemu_device.md)
-- [Testing plan](docs/testing.md)
-- [Bring-up guide](docs/bringup.md)
-- [Demo plan](docs/demo.md)
-- [End-to-end bring-up](docs/e2e.md)
+This repository is not a full QEMU or Linux checkout. It contains project-owned
+source files and helper scripts that apply those files to external source trees.
 
-## Quick Local Checks
+## Quick Check
+
+Run the local repository checks:
 
 ```sh
 make check
 ```
 
-This validates repository hygiene and builds the userspace regression test. Full
-runtime validation still requires applying the QEMU and Linux fragments to real
-source trees and booting the stack.
+This validates expected files, SPDX markers, whitespace hygiene, and builds the
+userspace regression binary.
 
-## External Integration Helpers
+## Running The ARM64 Demo
+
+Expected external checkouts:
+
+```text
+~/qemu        upstream QEMU checkout
+~/work/linux  upstream Linux checkout
+```
+
+Required host package on Ubuntu/WSL:
 
 ```sh
-scripts/apply-qemu.sh ~/work/qemu
+sudo apt-get install -y gcc-aarch64-linux-gnu
+```
+
+Run:
+
+```sh
+cd ~/qemu-linux-mmio-char-driver
+scripts/run-arm64-demo.sh ~/qemu ~/work/linux
+```
+
+The script:
+
+1. applies the QEMU payload to the QEMU checkout
+2. applies temporary ARM `virt` machine wiring for the local demo
+3. applies the Linux payload to the Linux checkout
+4. builds the ARM64 guest kernel pieces
+5. builds `drivers/misc/vmbox.ko`
+6. builds a static ARM64 `/init` demo program
+7. creates a tiny initramfs
+8. boots `qemu-system-aarch64 -machine virt`
+9. loads `vmbox.ko` and validates `/dev/vmbox0`
+
+The first run can take a while because it builds an ARM64 kernel. Later runs are
+incremental and much faster.
+
+## Manual Integration Helpers
+
+```sh
+scripts/apply-qemu.sh ~/qemu
 scripts/apply-linux.sh ~/work/linux
 scripts/build-userspace.sh /tmp/vmbox_test
 scripts/run-e2e-checklist.sh
 ```
 
-The apply scripts copy this repository's QEMU/Linux payload into external
-source checkouts and append the local build fragments if they are not already
-present.
+The apply scripts copy this repository's source payload into external checkouts
+and append the relevant build fragments if markers are not already present.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Register Reference](docs/REGISTERS.md)
+- [Driver API](docs/driver_api.md)
+- [Concurrency And Lifetime](docs/concurrency.md)
+- [QEMU Device Model](docs/qemu_device.md)
+- [Testing Plan](docs/testing.md)
+- [Bring-Up Guide](docs/bringup.md)
+- [Demo Guide](docs/demo.md)
+- [End-To-End Bring-Up](docs/e2e.md)
+- [Captured Demo Output](docs/demo-output.txt)
+
+## Current Status
+
+The stack has been validated locally with:
+
+- a current upstream QEMU checkout
+- a current upstream Linux checkout
+- an ARM64 Linux guest kernel
+- the `vmbox.ko` platform driver module
+- a minimal initramfs-based guest smoke test
+
+Captured passing output is stored in [docs/demo-output.txt](docs/demo-output.txt).
+
+Key demo result:
+
+```text
+[PASS] loaded vmbox.ko
+[PASS] /dev/vmbox0 appeared
+[PASS] open /dev/vmbox0
+[PASS] write message
+[PASS] poll readable
+[PASS] read transformed data: HELLO
+[PASS] ioctl status fifo_depth=16 tx=0 rx=0
+[PASS] ioctl stats bytes_written=5 bytes_read=5 irqs=5
+vmbox demo passed
+```
+
+### Limitations
+
+- The ARM64 demo uses `KBUILD_MODPOST_WARN=1` for the single-module build so it
+  does not require a full clean module-symbol pass before every demo run.
+- QTest coverage is scaffolded, but runnable QTest integration remains future
+  hardening.
+- Automated boot-demo CI is not enabled yet.
+- The driver intentionally supports one device instance and one opener.
+- Runtime PM, suspend/resume, DMA, and multi-instance support are future work.
 
 ## License
 
-This repository uses the MIT license for project documentation and scripts.
-QEMU-facing source files carry GPL-compatible SPDX identifiers because they are
-intended to become part of a QEMU patch.
-
-## Final Project Summary
-
-This repository implements a QEMU-emulated MMIO mailbox peripheral and Linux platform
-character driver exposing `/dev/vmbox0`, with FIFO-backed data paths, explicit
-concurrency and locking design, safe remove/unbind lifetime handling, module
-unload safety, portable MMIO access using `readl()`/`writel()`,
-interrupt-driven blocking I/O, `poll()`/`ioctl()`/`compat_ioctl` support,
-debugfs instrumentation, production-style error counters, devicetree binding
-schema, QTest hardware-model coverage, userspace regression tests, ioctl
-fuzzing, static-analysis CI scaffolding, sanitizer runtime-test planning, and
-end-to-end QEMU boot validation docs.
+Project documentation and scripts use the MIT license. QEMU-facing and
+kernel-facing source files carry GPL-compatible SPDX identifiers appropriate for
+their intended upstream trees.

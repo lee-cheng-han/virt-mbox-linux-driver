@@ -46,6 +46,37 @@ append_if_missing() {
     echo "updated: $target"
 }
 
+append_kconfig_if_missing() {
+    marker="$1"
+    fragment="$2"
+    target="$3"
+    tmp="${target}.tmp.$$"
+
+    need_file "$fragment"
+    need_file "$target"
+
+    if grep -q "$marker" "$target"; then
+        echo "already present: $marker in $target"
+        return
+    fi
+
+    awk -v fragment="$fragment" '
+        $0 == "endmenu" {
+            print ""
+            print "# vmbox integration from qemu-linux-mmio-char-driver"
+            while ((getline line < fragment) > 0) {
+                if (line !~ /^# SPDX-License-Identifier/) {
+                    print line
+                }
+            }
+            close(fragment)
+        }
+        { print }
+    ' "$target" > "$tmp"
+    mv "$tmp" "$target"
+    echo "updated: $target"
+}
+
 need_dir "$linux_tree/drivers/misc"
 need_dir "$linux_tree/include/uapi/linux"
 need_dir "$linux_tree/Documentation/devicetree/bindings/misc"
@@ -57,7 +88,7 @@ cp "$repo_root/kernel/include/uapi/linux/vmbox.h" \
 cp "$repo_root/kernel/Documentation/devicetree/bindings/misc/virt,mbox.yaml" \
    "$linux_tree/Documentation/devicetree/bindings/misc/virt,mbox.yaml"
 
-append_if_missing "config VMBOX" \
+append_kconfig_if_missing "config VMBOX" \
     "$repo_root/kernel/drivers/misc/Kconfig.fragment" \
     "$linux_tree/drivers/misc/Kconfig"
 append_if_missing "vmbox.o" \

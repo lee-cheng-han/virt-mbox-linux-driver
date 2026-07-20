@@ -461,9 +461,10 @@ userspace test suite runs
 all tests pass
 ```
 
-Status: documented in `docs/e2e.md`, including command shape and guest
-validation commands. Helper scripts exist under `scripts/` to apply QEMU/Linux
-payloads, build the userspace test, and print the E2E checklist.
+Status: implemented by `scripts/run-arm64-demo.sh` and captured in
+`docs/demo-output.txt`. The demo applies QEMU/Linux payloads, builds the ARM64
+guest kernel and `vmbox.ko`, creates a tiny initramfs, boots QEMU, loads the
+module, and verifies `/dev/vmbox0` read/write, `poll()`, and ioctl status/stats.
 
 ## Step 18: Final Demo And Polish
 
@@ -481,5 +482,5 @@ Add:
 - future work
 - MAINTAINERS entry
 
-Status: final documentation, demo notes, known limitations, and MAINTAINERS
-coverage are present in this repository.
+Status: final documentation, demo notes, captured demo output, known
+limitations, and MAINTAINERS coverage are present in this repository.

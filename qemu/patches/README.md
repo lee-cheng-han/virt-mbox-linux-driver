@@ -80,6 +80,11 @@ This first integration step is compile-oriented. Runtime instantiation is a
 separate step because a `SysBusDevice` also needs a machine or test harness to
 map its MMIO region and wire its IRQ line.
 
+For the local ARM64 boot demo, `scripts/run-arm64-demo.sh` also checks and
+applies the temporary `hw/arm/virt.c` wiring shown in
+`qemu/patches/virt-demo.patch`. It maps `virt-mbox` at `0x09100000`, connects
+one SPI interrupt, and emits a `compatible = "virt,mbox"` devicetree node.
+
 ## Apply Checklist
 
 From the root of a QEMU checkout:
@@ -120,9 +125,9 @@ Any softmmu target can compile the device once `CONFIG_QEMU_MBOX` is selected
 by a machine or temporary local config. The optional `default.mak` fragment does
 that for `aarch64-softmmu`.
 
-## Runtime Instantiation Plan
+## Runtime Instantiation
 
-Later milestones should instantiate the device from one of these places:
+Runtime instantiation can come from one of these places:
 
 - a small QTest-only machine
 - a development machine hook
@@ -137,6 +142,12 @@ The instantiation code must:
 
 Runtime instantiation should be added in a separate patch from the initial
 compile integration so each step stays reviewable.
+
+The current local demo uses the third option. `scripts/run-arm64-demo.sh`
+applies the same temporary machine edit shown in `virt-demo.patch`. That edit
+is intentionally demo-oriented; an upstreamable version would need a proper
+property, board option, or test-machine path instead of unconditional device
+creation.
 
 ## QTest Skeleton
 

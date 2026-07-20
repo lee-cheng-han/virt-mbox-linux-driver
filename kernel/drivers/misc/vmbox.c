@@ -665,7 +665,7 @@ static const struct file_operations vmbox_fops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = vmbox_compat_ioctl,
 #endif
-	.llseek = no_llseek,
+    .llseek = noop_llseek,
 };
 
 static void vmbox_chrdev_unregister(struct vmbox_dev *vmbox)

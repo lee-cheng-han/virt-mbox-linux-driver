@@ -22,15 +22,36 @@ debugfs/sysfs state is readable
 From this repository:
 
 ```sh
-scripts/apply-qemu.sh ~/work/qemu
+scripts/apply-qemu.sh ~/qemu
 scripts/apply-linux.sh ~/work/linux
 scripts/build-userspace.sh /tmp/vmbox_test
 scripts/run-e2e-checklist.sh
+scripts/run-arm64-demo.sh ~/qemu ~/work/linux
 ```
 
 The apply scripts are intentionally conservative: they copy source payloads and
 append integration fragments only when the target checkout does not already
 contain the expected marker.
+
+## Working ARM64 Demo
+
+The working end-to-end demo command is:
+
+```sh
+scripts/run-arm64-demo.sh ~/qemu ~/work/linux
+```
+
+It performs the following steps:
+
+1. Applies the QEMU payload and temporary ARM `virt` demo wiring.
+2. Applies the Linux payload to the external Linux checkout.
+3. Builds the ARM64 kernel image and `drivers/misc/vmbox.ko`.
+4. Builds a static ARM64 init program from `tests/demo/vmbox_init.c`.
+5. Creates a tiny initramfs containing `/init` and `/vmbox.ko`.
+6. Boots `qemu-system-aarch64 -machine virt`.
+7. Loads the module and runs the guest test through `/dev/vmbox0`.
+
+The captured passing output is in `docs/demo-output.txt`.
 
 ## QEMU Command Shape
 
@@ -39,26 +60,26 @@ qemu-system-aarch64 \
   -machine virt \
   -cpu cortex-a57 \
   -m 1024 \
-  -kernel Image \
-  -append "console=ttyAMA0 root=/dev/vda rw" \
-  -drive if=none,file=rootfs.ext4,format=raw,id=hd0 \
-  -device virtio-blk-device,drive=hd0 \
+  -kernel ~/work/linux/arch/arm64/boot/Image \
+  -initrd /tmp/vmbox-arm64-demo/initramfs.cpio \
+  -append "console=ttyAMA0 rdinit=/init panic=-1" \
+  -no-reboot \
   -nographic
 ```
 
-The final command line depends on the external QEMU machine wiring used for
-`virt-mbox`.
+The demo script wraps this command and regenerates the initramfs before boot.
 
 ## Guest Validation
 
 ```sh
-modprobe vmbox
+finit_module("/vmbox.ko")
 test -e /dev/vmbox0
-cat /sys/bus/platform/devices/*mbox*/fifo_depth
-cat /sys/bus/platform/devices/*mbox*/status
-mount -t debugfs none /sys/kernel/debug || true
-cat /sys/kernel/debug/vmbox0/stats
-./vmbox_test
+open("/dev/vmbox0")
+write("hello")
+poll(POLLIN)
+read("HELLO")
+ioctl(VMBOX_IOC_GET_STATUS)
+ioctl(VMBOX_IOC_GET_STATS)
 ```
 
 ## Sanitizer Boot Notes

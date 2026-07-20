@@ -9,8 +9,8 @@
 #ifndef HW_MISC_QEMU_MBOX_H
 #define HW_MISC_QEMU_MBOX_H
 
-#include "hw/irq.h"
-#include "hw/sysbus.h"
+#include "hw/core/irq.h"
+#include "hw/core/sysbus.h"
 #include "qemu/timer.h"
 #include "qom/object.h"
 

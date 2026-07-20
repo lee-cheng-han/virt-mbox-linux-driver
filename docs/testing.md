@@ -119,6 +119,20 @@ Compat ioctl tests:
 Blocking tests must include timeouts. If an IRQ never arrives, the test should
 fail with a clear timeout instead of hanging indefinitely.
 
+## ARM64 Demo Smoke Test
+
+The working boot demo is:
+
+```sh
+scripts/run-arm64-demo.sh ~/qemu ~/work/linux
+```
+
+It runs a tiny ARM64 initramfs test instead of the full userspace regression
+suite. The guest test loads `/vmbox.ko`, waits for `/dev/vmbox0`, writes
+`hello`, waits with `poll()`, reads `HELLO`, and checks ioctl status/stats.
+
+The captured passing console output is in `docs/demo-output.txt`.
+
 ## Ioctl Fuzzing
 
 The bounded manual fuzzer plan lives in:

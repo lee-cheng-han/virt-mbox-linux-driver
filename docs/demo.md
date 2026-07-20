@@ -1,13 +1,15 @@
-# Demo Plan
+# Demo
 
-The final demo shows the complete hardware/software stack working from
-userspace down to the QEMU device model after the repository fragments are
-applied to full QEMU and Linux source trees.
+The working demo shows the complete hardware/software stack running from a tiny
+guest userspace init program down to the QEMU MMIO device model. It applies the
+repository payloads to external QEMU and Linux checkouts, builds an ARM64 kernel
+and `vmbox.ko`, creates a minimal initramfs, boots `qemu-system-aarch64`, and
+runs the mailbox smoke test inside the guest.
 
 ## Architecture Diagram
 
 ```text
-userspace vmbox_test
+guest /init demo test
         |
         | open/read/write/poll/ioctl
         v
@@ -23,52 +25,78 @@ MMIO registers + IRQ
 TX FIFO -> timer processing -> RX FIFO
 ```
 
-## Demo Goals
+## Run Command
 
-The demo should prove:
+From this repository:
+
+```sh
+scripts/run-arm64-demo.sh ~/qemu ~/work/linux
+```
+
+Expected external checkouts:
+
+- QEMU source tree: `~/qemu`
+- Linux source tree: `~/work/linux`
+
+Required host tool:
+
+- `aarch64-linux-gnu-gcc`
+
+On Ubuntu/WSL:
+
+```sh
+sudo apt-get install -y gcc-aarch64-linux-gnu
+```
+
+The first run can take a while because it builds the ARM64 kernel. Later runs
+are incremental and much faster.
+
+## Demo Coverage
+
+The demo proves:
 
 - QEMU exposes the custom MMIO device.
-- Linux probes the platform driver.
+- Linux probes the platform driver from a devicetree node.
 - `/dev/vmbox0` is created.
 - userspace can write data and read processed data.
-- sysfs exposes stable status and FIFO depth attributes.
-- blocking and non-blocking I/O behave correctly.
 - `poll()` wakes on device readiness.
-- ioctl reset, status, and stats work.
-- debugfs exposes useful diagnostic state.
+- ioctl status and stats work.
+- QEMU, Linux, the module, and userspace agree on the register contract.
 
-## Expected Boot Log
+## Captured Output
 
-Target driver log shape:
-
-```text
-vmbox 10000000.mbox: device id 0x514d424f
-vmbox 10000000.mbox: hardware version 1.0
-vmbox 10000000.mbox: fifo depth 16
-vmbox 10000000.mbox: irq registered
-vmbox 10000000.mbox: registered /dev/vmbox0
-```
-
-Exact bus addresses may change depending on the QEMU machine and device tree.
-
-## Expected Test Output
-
-Target userspace test output:
+A successful captured run is stored in `docs/demo-output.txt`.
 
 ```text
-[PASS] basic read/write
-[PASS] ioctl reset
-[PASS] ioctl status
-[PASS] ioctl stats
-[PASS] poll wakeup
-[PASS] non-blocking read
-[PASS] non-blocking write
-[PASS] FIFO full handling
-[PASS] FIFO empty handling
-[PASS] invalid ioctl handling
-[PASS] stress 1000 messages
-All tests passed.
+vmbox demo init starting
+vmbox 9100000.mbox: probed fifo_depth=16 irq=22
+[PASS] loaded vmbox.ko
+[PASS] /dev/vmbox0 appeared
+[PASS] open /dev/vmbox0
+[PASS] write message
+[PASS] poll readable
+[PASS] read transformed data: HELLO
+[PASS] ioctl status fifo_depth=16 tx=0 rx=0
+[PASS] ioctl stats bytes_written=5 bytes_read=5 irqs=5
+vmbox demo passed
+reboot: Power down
 ```
+
+Exact IRQ numbering can vary depending on the QEMU machine and guest kernel.
+
+## Demo Implementation
+
+The demo-specific pieces are:
+
+- `scripts/run-arm64-demo.sh`
+- `tests/demo/vmbox_init.c`
+- `qemu/patches/virt-demo.patch`
+
+The QEMU demo wiring instantiates `virt-mbox` on the ARM `virt` machine at
+`0x09100000` and emits a matching `virt,mbox` devicetree node.
+`scripts/run-arm64-demo.sh` applies that temporary wiring idempotently; the
+patch file is kept as a reviewable reference. The initramfs contains a static
+ARM64 `/init` program and `vmbox.ko`.
 
 ## Debugfs Sample
 
@@ -107,16 +135,17 @@ For a polished project page, keep:
 - device tree snippet
 - driver boot logs
 - userspace test logs
+- captured `docs/demo-output.txt`
 - debugfs sample output
 - CI run link or screenshot
 - short architecture diagram
 
 ## Known Limitations
 
-- The QEMU device source is project-owned and still needs to be applied to an
-  external QEMU checkout for compile and QTest execution.
-- The Linux driver source is project-owned and still needs to be applied to an
-  external Linux checkout for module build, boot, and runtime tests.
+- The QEMU and Linux source payloads are still project-owned and are applied to
+  external source trees by helper scripts.
+- The ARM64 demo uses `KBUILD_MODPOST_WARN=1` for the single-module build to
+  avoid requiring a full clean module-symbol pass before every demo run.
 - The current driver supports one device instance and one opener.
 - Runtime PM, suspend/resume, DMA, and multi-instance support are future work.
 
